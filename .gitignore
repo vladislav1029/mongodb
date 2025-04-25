@@ -329,4 +329,4 @@ etc/trimmed_system_perf.yml
 
 data/
 
-
+*.env
