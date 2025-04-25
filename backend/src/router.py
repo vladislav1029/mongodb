@@ -1,19 +1,17 @@
-
-
 from http.client import InvalidURL
 from bson import ObjectId
 from bson.errors import InvalidId
 from fastapi import APIRouter, Depends, HTTPException
-
-from .database import get_database
+from .database import AsyncDep, get_database
 from .models import Item, ItemUpdate
 from .schemas import ItemResponse, ItemsResponse
-
+from motor.core import AgnosticDatabase
 
 router = APIRouter()
 
+
 @router.post("/items/", response_model=ItemResponse)
-async def create_item(item: Item, db=Depends(get_database)):
+async def create_item(item: Item, db: AsyncDep):
     item_dict = item.model_dump()
     result = await db["items"].insert_one(item_dict)
     created_item = await db["items"].find_one({"_id": result.inserted_id})
@@ -21,7 +19,7 @@ async def create_item(item: Item, db=Depends(get_database)):
 
 
 @router.get("/items/{item_id}", response_model=ItemResponse)
-async def read_item(item_id: str, db=Depends(get_database)):
+async def read_item(item_id: str, db: AsyncDep):
     try:
         obj_id = ObjectId(item_id)
     except InvalidURL:
@@ -34,7 +32,7 @@ async def read_item(item_id: str, db=Depends(get_database)):
 
 
 @router.get("/items/", response_model=ItemsResponse)
-async def read_items(db=Depends(get_database)):
+async def read_items(db: AsyncDep):
     items = await db["items"].find().to_list(length=None)
     return ItemsResponse(
         items=[ItemResponse(**item, id=str(item["_id"])) for item in items]
@@ -42,7 +40,7 @@ async def read_items(db=Depends(get_database)):
 
 
 @router.put("/items/{item_id}", response_model=ItemResponse)
-async def update_item(item_id: str, updated_item: ItemUpdate, db=Depends(get_database)):
+async def update_item(item_id: str, updated_item: ItemUpdate, db: AsyncDep):
     try:
         obj_id = ObjectId(item_id)
     except InvalidId:
@@ -67,7 +65,7 @@ async def update_item(item_id: str, updated_item: ItemUpdate, db=Depends(get_dat
 
 
 @router.delete("/items/{item_id}", response_model=dict)
-async def delete_item(item_id: str, db=Depends(get_database)):
+async def delete_item(item_id: str, db: AsyncDep):
     try:
         obj_id = ObjectId(item_id)
     except InvalidId:
